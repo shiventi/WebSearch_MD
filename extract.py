@@ -287,15 +287,16 @@ st.set_page_config(
     page_icon="🦁",
 )
 
-@st.cache_resource
-def init_connection():
-    return MongoClient(st.secrets["mongodb"]["user"])
+#@st.cache_resource
+#def init_connection():
+    #return MongoClient(st.secrets["mongodb"]["user"])
 
-client = init_connection()
+#client = init_connection()
 
 @st.cache_data(ttl=600)
 def insert_in_db(user_input):
     try:
+        client = MongoClient("mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000")
         # Load all sentences from the questions.txt file
         with open("questions.txt", "r", encoding="utf-8") as file:
             all_sentences = [line.strip() for line in file.readlines()]
