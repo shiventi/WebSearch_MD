@@ -284,51 +284,54 @@ def find_most_similar_sentence(user_input_sentence, all_sentences):
 @st.cache_resource
 def init_connection():
     return pymongo.MongoClient(st.secrets["mongodb"]["user"])
-    
+
 client = init_connection()
 
 @st.cache_data(ttl=600)
 def insert_in_db(user_input):
-    with open("questions.txt", "r", encoding="utf-8") as file:
-        all_sentences = [line.strip() for line in file.readlines()]
-    db = client.questiondb
-    question = db.question
-    b = find_most_similar_sentence(str(user_input), all_sentences)
-    if float(b[1]) > 0.6:
-        return "ALL GOOD"
-    else:
-        new_question = {"question": user_input}
-        question.insert_one(new_question)
-        return "ADDED"
+    try:
+        with open("questions.txt", "r", encoding="utf-8") as file:
+            all_sentences = [line.strip() for line in file.readlines()]
 
+        db = client.questiondb
+        question = db.question
 
+        b = find_most_similar_sentence(str(user_input), all_sentences)
+
+        if float(b[1]) > 0.6:
+            return "ALL GOOD"
+        else:
+            new_question = {"question": user_input}
+            question.insert_one(new_question)
+            return "ADDED"
+    except Exception as e:
+        return f"Error: {str(e)}"
 
 def main():
-    
     st.set_page_config(
         page_title="Question Answering",
         page_icon="🦁",
     )
     st.title("Question Answering")
 
-    st.warning("this app runs very slow bc we fetch data from the web", icon="⚠️")
-    user_input = st.text_input("Enter your sentence:")
+    st.warning("This app may run slowly as it fetches data from the web", icon="⚠️")
 
+    user_input = st.text_input("Enter your sentence:")
 
     s = profanity.contains_profanity(str(user_input))
 
-    if s == False:
+    if not s:
         if st.button("Get Answer"):
             with st.spinner("Finding answer..."):
                 answer_result = answer(user_input)
                 time.sleep(2)
             st.success("Answer found!")
             st.write("Answer:", answer_result)
-            a = insert_in_db(user_input)
-            st.write(a)
+
+            result_message = insert_in_db(user_input)
+            st.write(result_message)
     else:
-        st.error("NO BAD WORDS!", icon='🚨')
-        pass
+        st.error("NO BAD WORDS ALLOWED!", icon='🚨')
 
 if __name__ == "__main__":
     main()
