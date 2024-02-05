@@ -293,11 +293,12 @@ def init_connection():
     return pymongo.MongoClient(st.secrets["mongodb"]["user"])
 
 # Initialize the MongoDB client
-client = init_connection()
+
 
 @st.cache_data(ttl=600)
 def insert_in_db(user_input):
     try:
+        client = init_connection()
         # Load all sentences from the questions.txt file
         with open("questions.txt", "r", encoding="utf-8") as file:
             all_sentences = [line.strip() for line in file.readlines()]
