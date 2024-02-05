@@ -39,6 +39,8 @@ import streamlit as st
 from sentence_transformers import SentenceTransformer, util
 from googlesearch import search
 from transformers import AutoModelForQuestionAnswering, AutoTokenizer, pipeline
+from pymongo import MongoClient
+import torch
 
 def extract_all_span_text(input_text):
     soup = BeautifulSoup(input_text, 'html.parser')
@@ -66,10 +68,8 @@ def generate_summary(paragraph, model_name="Falconsai/text_summarization"):
     return summarized_text
 ####################
 
-
+model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 nlp = spacy.load("en_core_web_sm")
-
-
 
 
 def link_finder(query):
@@ -264,7 +264,31 @@ def answer(user_input):
                 c = i.split(": ")
                 return c[1]
 
+
+
+
+def find_most_similar_sentence(user_input_sentence, all_sentences):
+    user_input_embedding = model.encode(user_input_sentence, convert_to_tensor=True)
+
+    all_sentence_embeddings = model.encode(all_sentences, convert_to_tensor=True)
+
+    similarities = util.pytorch_cos_sim(user_input_embedding, all_sentence_embeddings)[0]
+
+    max_similarity_index = torch.argmax(similarities).item()
+
+    most_similar_sentence = all_sentences[max_similarity_index]
+    max_similarity = similarities[max_similarity_index].item()
+
+    return most_similar_sentence, max_similarity
+
+with open("questions.txt", "r", encoding="utf-8") as file:
+    all_sentences = [line.strip() for line in file.readlines()]
+
+
+
 def main():
+    key = st.secrets["mongodb"]["user"]
+    
     st.set_page_config(
         page_title="Question Answering",
         page_icon="🦁",
@@ -272,8 +296,19 @@ def main():
     st.title("Question Answering")
 
     st.warning("this app runs very slow bc we fetch data from the web", icon="⚠️")
-
+    key = st.secrets["mongodb"]["user"]
     user_input = st.text_input("Enter your sentence:")
+
+    client = MongoClient(key)
+    db = client.questiondb
+    question = db.question
+
+    b = find_most_similar_sentence(str(a), all_sentences)
+    if float(b[1]) > 0.6:
+        pass
+    else:
+        new_question = {"question": a}
+        question.insert_one(new_question)
 
     s = profanity.contains_profanity(str(user_input))
 
