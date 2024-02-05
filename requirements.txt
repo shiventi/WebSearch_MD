@@ -9,3 +9,4 @@ torch
 transformers
 googlesearch-python
 pymongo
+better-profanity
