@@ -303,7 +303,7 @@ def main():
     db = client.questiondb
     question = db.question
 
-    b = find_most_similar_sentence(str(a), all_sentences)
+    b = find_most_similar_sentence(str(user_input), all_sentences)
     if float(b[1]) > 0.6:
         pass
     else:
