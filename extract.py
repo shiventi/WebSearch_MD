@@ -290,11 +290,11 @@ def insert_in_db(user_input):
     question = db.question
     b = find_most_similar_sentence(str(user_input), all_sentences)
     if float(b[1]) > 0.6:
-        pass
+        return "ALL GOOD"
     else:
         new_question = {"question": user_input}
         question.insert_one(new_question)
-    return True
+        return "ADDED"
 
 
 
@@ -319,7 +319,8 @@ def main():
                 answer_result = answer(user_input)
                 time.sleep(2)
             st.success("Answer found!")
-            insert_in_db(user_input)
+            a = insert_in_db(user_input)
+            st.write(a)
             st.write("Answer:", answer_result)
     else:
         st.error("NO BAD WORDS!", icon='🚨')
