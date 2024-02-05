@@ -290,6 +290,7 @@ st.set_page_config(
 @st.cache_resource
 def init_connection():
     # Establish MongoDB connection using credentials from Streamlit secrets
+    st.write(st.secrets["mongodb"]["user"])
     return pymongo.MongoClient(st.secrets["mongodb"]["user"])
 
 # Initialize the MongoDB client
