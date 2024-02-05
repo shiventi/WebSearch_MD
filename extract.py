@@ -281,8 +281,20 @@ def find_most_similar_sentence(user_input_sentence, all_sentences):
 
     return most_similar_sentence, max_similarity
 
-with open("questions.txt", "r", encoding="utf-8") as file:
-    all_sentences = [line.strip() for line in file.readlines()]
+def insert_in_db(user_input):
+    key = st.secrets["mongodb"]["user"]
+    with open("questions.txt", "r", encoding="utf-8") as file:
+        all_sentences = [line.strip() for line in file.readlines()]
+    client = MongoClient(key)
+    db = client.questiondb
+    question = db.question
+    b = find_most_similar_sentence(str(user_input), all_sentences)
+    if float(b[1]) > 0.6:
+        pass
+    else:
+        new_question = {"question": user_input}
+        question.insert_one(new_question)
+    return True
 
 
 
@@ -296,19 +308,8 @@ def main():
     st.title("Question Answering")
 
     st.warning("this app runs very slow bc we fetch data from the web", icon="⚠️")
-    key = st.secrets["mongodb"]["user"]
     user_input = st.text_input("Enter your sentence:")
 
-    client = MongoClient(key)
-    db = client.questiondb
-    question = db.question
-
-    b = find_most_similar_sentence(str(user_input), all_sentences)
-    if float(b[1]) > 0.6:
-        pass
-    else:
-        new_question = {"question": user_input}
-        question.insert_one(new_question)
 
     s = profanity.contains_profanity(str(user_input))
 
@@ -318,6 +319,7 @@ def main():
                 answer_result = answer(user_input)
                 time.sleep(2)
             st.success("Answer found!")
+            insert_in_db(user_input)
             st.write("Answer:", answer_result)
     else:
         st.error("NO BAD WORDS!", icon='🚨')
