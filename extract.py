@@ -283,21 +283,27 @@ def find_most_similar_sentence(user_input_sentence, all_sentences):
 
 @st.cache_resource
 def init_connection():
+    # Establish MongoDB connection using credentials from Streamlit secrets
     return pymongo.MongoClient(st.secrets["mongodb"]["user"])
 
+# Initialize the MongoDB client
 client = init_connection()
 
 @st.cache_data(ttl=600)
 def insert_in_db(user_input):
     try:
+        # Load all sentences from the questions.txt file
         with open("questions.txt", "r", encoding="utf-8") as file:
             all_sentences = [line.strip() for line in file.readlines()]
 
+        # Access the question collection in the MongoDB database
         db = client.questiondb
         question = db.question
 
+        # Find the most similar sentence
         b = find_most_similar_sentence(str(user_input), all_sentences)
 
+        # Check similarity threshold and insert into the database
         if float(b[1]) > 0.6:
             return "ALL GOOD"
         else:
@@ -307,20 +313,27 @@ def insert_in_db(user_input):
     except Exception as e:
         return f"Error: {str(e)}"
 
+# Set Streamlit page configuration outside of the main function
+st.set_page_config(
+    page_title="Question Answering",
+    page_icon="🦁",
+)
+
 def main():
-    st.set_page_config(
-        page_title="Question Answering",
-        page_icon="🦁",
-    )
+    # Rest of your main function remains the same
     st.title("Question Answering")
 
+    # Display a warning about the app's potential slowness
     st.warning("This app may run slowly as it fetches data from the web", icon="⚠️")
 
+    # Get user input
     user_input = st.text_input("Enter your sentence:")
 
+    # Check for profanity in user input
     s = profanity.contains_profanity(str(user_input))
 
     if not s:
+        # If no profanity, proceed with finding the answer and inserting into the database
         if st.button("Get Answer"):
             with st.spinner("Finding answer..."):
                 answer_result = answer(user_input)
@@ -328,9 +341,11 @@ def main():
             st.success("Answer found!")
             st.write("Answer:", answer_result)
 
+            # Insert the user input into the database
             result_message = insert_in_db(user_input)
             st.write(result_message)
     else:
+        # Display an error message for profanity
         st.error("NO BAD WORDS ALLOWED!", icon='🚨')
 
 if __name__ == "__main__":
