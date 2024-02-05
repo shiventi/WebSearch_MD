@@ -283,7 +283,7 @@ def find_most_similar_sentence(user_input_sentence, all_sentences):
 
 @st.cache_resource
 def init_connection():
-    return pymongo.MongoClient(**st.secrets["mongo"]["user"])
+    return pymongo.MongoClient(**st.secrets["mongodb"]["user"])
     
 client = init_connection()
 
@@ -304,7 +304,6 @@ def insert_in_db(user_input):
 
 
 def main():
-    key = st.secrets["mongodb"]["user"]
     
     st.set_page_config(
         page_title="Question Answering",
