@@ -319,9 +319,9 @@ def main():
                 answer_result = answer(user_input)
                 time.sleep(2)
             st.success("Answer found!")
+            st.write("Answer:", answer_result)
             a = insert_in_db(user_input)
             st.write(a)
-            st.write("Answer:", answer_result)
     else:
         st.error("NO BAD WORDS!", icon='🚨')
         pass
