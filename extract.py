@@ -39,7 +39,7 @@ import streamlit as st
 from sentence_transformers import SentenceTransformer, util
 from googlesearch import search
 from transformers import AutoModelForQuestionAnswering, AutoTokenizer, pipeline
-import pymongo
+from pymongo import MongoClient
 import torch
 
 def extract_all_span_text(input_text):
@@ -289,17 +289,13 @@ st.set_page_config(
 
 @st.cache_resource
 def init_connection():
-    # Establish MongoDB connection using credentials from Streamlit secrets
-    st.write(st.secrets["mongodb"]["user"])
-    return pymongo.MongoClient(st.secrets["mongodb"]["user"])
+    return MongoClient(st.secrets["mongodb"]["user"])
 
-# Initialize the MongoDB client
-
+client = init_connection()
 
 @st.cache_data(ttl=600)
 def insert_in_db(user_input):
     try:
-        client = init_connection()
         # Load all sentences from the questions.txt file
         with open("questions.txt", "r", encoding="utf-8") as file:
             all_sentences = [line.strip() for line in file.readlines()]
