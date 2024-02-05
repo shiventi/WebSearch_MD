@@ -281,6 +281,12 @@ def find_most_similar_sentence(user_input_sentence, all_sentences):
 
     return most_similar_sentence, max_similarity
 
+# Set Streamlit page configuration outside of the main function
+st.set_page_config(
+    page_title="Question Answering",
+    page_icon="🦁",
+)
+
 @st.cache_resource
 def init_connection():
     # Establish MongoDB connection using credentials from Streamlit secrets
@@ -312,12 +318,6 @@ def insert_in_db(user_input):
             return "ADDED"
     except Exception as e:
         return f"Error: {str(e)}"
-
-# Set Streamlit page configuration outside of the main function
-st.set_page_config(
-    page_title="Question Answering",
-    page_icon="🦁",
-)
 
 def main():
     # Rest of your main function remains the same
