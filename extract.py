@@ -307,7 +307,7 @@ def main():
     if float(b[1]) > 0.6:
         pass
     else:
-        new_question = {"question": a}
+        new_question = {"question": user_input}
         question.insert_one(new_question)
 
     s = profanity.contains_profanity(str(user_input))
