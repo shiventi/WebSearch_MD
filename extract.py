@@ -39,7 +39,7 @@ import streamlit as st
 from sentence_transformers import SentenceTransformer, util
 from googlesearch import search
 from transformers import AutoModelForQuestionAnswering, AutoTokenizer, pipeline
-from pymongo import MongoClient
+import pymongo
 import torch
 
 def extract_all_span_text(input_text):
@@ -281,11 +281,16 @@ def find_most_similar_sentence(user_input_sentence, all_sentences):
 
     return most_similar_sentence, max_similarity
 
+@st.cache_resource
+def init_connection():
+    return pymongo.MongoClient(**st.secrets["mongo"]["user"])
+    
+client = init_connection()
+
+@st.cache_data(ttl=600)
 def insert_in_db(user_input):
-    key = st.secrets["mongodb"]["user"]
     with open("questions.txt", "r", encoding="utf-8") as file:
         all_sentences = [line.strip() for line in file.readlines()]
-    client = MongoClient(key)
     db = client.questiondb
     question = db.question
     b = find_most_similar_sentence(str(user_input), all_sentences)
