@@ -205,7 +205,7 @@ def web_search(url, query, element_type=None, class_name=None):
 
 
 def open_file(u_type):
-    client = MongoClient(st.secrets["mongodb"]["user"])
+    client = MongoClient(st.secrets["mongodb"]["user"], serverSelectionTimeoutMS=60000)
 
     db = client.dataset
 
@@ -244,7 +244,7 @@ def find_most_similar_sentence(user_input_sentence, all_sentences):
 
 def write_data(user_input, q_a = None):
     all_sentences = open_file("question")
-    client = MongoClient(st.secrets["mongodb"]["user"])
+    client = MongoClient(st.secrets["mongodb"]["user"], serverSelectionTimeoutMS=60000)
     db = client.dataset
 
     question = db.chats
