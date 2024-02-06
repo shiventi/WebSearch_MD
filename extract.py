@@ -68,8 +68,10 @@ def generate_summary(paragraph, model_name="Falconsai/text_summarization"):
     return summarized_text
 ####################
 
-model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+
 nlp = spacy.load("en_core_web_sm")
+
+
 
 
 def link_finder(query):
@@ -202,6 +204,73 @@ def web_search(url, query, element_type=None, class_name=None):
     return search_results
 
 
+def open_file(u_type):
+    client = MongoClient(st.secrets["mongodb"]["user"])
+
+    db = client.dataset
+
+    question = db.chats
+    x = question.find()
+
+    if u_type.lower() == "question":
+        c = []
+        for i in x:
+            b = i["kv"]
+            b = b.split("  ")
+            c.append(b[0])
+        return c
+    elif u_type.lower() == "answer":
+        c = []
+        for i in x:
+            b = i["kv"]
+            b = b.split("  ")
+            c.append(b[1])
+        return c
+
+def find_most_similar_sentence(user_input_sentence, all_sentences):
+    model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+    user_input_embedding = model.encode(user_input_sentence, convert_to_tensor=True)
+
+    all_sentence_embeddings = model.encode(all_sentences, convert_to_tensor=True)
+
+    similarities = util.pytorch_cos_sim(user_input_embedding, all_sentence_embeddings)[0]
+
+    max_similarity_index = torch.argmax(similarities).item()
+
+    most_similar_sentence = all_sentences[max_similarity_index]
+    max_similarity = similarities[max_similarity_index].item()
+
+    return most_similar_sentence, max_similarity
+
+def write_data(user_input, q_a = None):
+    all_sentences = open_file("question")
+    client = MongoClient(st.secrets["mongodb"]["user"])
+    db = client.dataset
+
+    question = db.chats
+
+    b = find_most_similar_sentence(str(user_input), all_sentences)
+
+    if float(b[1]) > 0.7:
+        print("ALL GOOD!")
+    else:
+        cursor = question.find()
+        lister = []
+        for document in cursor:
+            a = str(document["kv"])
+            a = a.split("  ")
+            lister.append(str(a))
+
+        c = find_most_similar_sentence(str(user_input), lister)
+
+        if float(c[1]) > float(0.8):
+            pass
+        else:
+            #new_question = {"question": user_input}
+            new_question = {"kv": str(q_a)}
+            question.insert_one(new_question)
+            print("QUESTION ADDED")
+
 def answer(user_input):
     model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 
@@ -216,8 +285,7 @@ def answer(user_input):
     most_similar_sentence = all_sentences[max_similarity_index]
     max_similarity = similarities[max_similarity_index]
 
-    with open("answers.txt", "r") as a:
-        b = a.readlines()
+    b = open_file("question")
 
     if float(max_similarity) <= float(0.81):
         a_result = link_finder(user_input)
@@ -259,91 +327,51 @@ def answer(user_input):
                     return "NOTHING"
 
     else:
+        counter = 0
         for i in b:
             if most_similar_sentence in i:
-                c = i.split(": ")
-                return c[1]
+                c = open_file("answer")
+                return c[counter]
+            counter+=1
 
 
-
-
-def find_most_similar_sentence(user_input_sentence, all_sentences):
-    user_input_embedding = model.encode(user_input_sentence, convert_to_tensor=True)
-
-    all_sentence_embeddings = model.encode(all_sentences, convert_to_tensor=True)
-
-    similarities = util.pytorch_cos_sim(user_input_embedding, all_sentence_embeddings)[0]
-
-    max_similarity_index = torch.argmax(similarities).item()
-
-    most_similar_sentence = all_sentences[max_similarity_index]
-    max_similarity = similarities[max_similarity_index].item()
-
-    return most_similar_sentence, max_similarity
-
-# Set Streamlit page configuration outside of the main function
-st.set_page_config(
-    page_title="Question Answering",
-    page_icon="🦁",
-)
-
-#@st.cache_resource
-def init_connection():
-    return MongoClient(st.secrets["mongodb"]["user"])
-client = init_connection()
-
-@st.cache_data(ttl=600)
-def insert_in_db(user_input):
-    try:
-        # Load all sentences from the questions.txt file
-        with open("questions.txt", "r", encoding="utf-8") as file:
-            all_sentences = [line.strip() for line in file.readlines()]
-
-        # Access the question collection in the MongoDB database
-        db = client.questiondb
-        question = db.question
-
-        # Find the most similar sentence
-        b = find_most_similar_sentence(str(user_input), all_sentences)
-
-        # Check similarity threshold and insert into the database
-        if float(b[1]) > 0.6:
-            return "ALL GOOD"
-        else:
-            new_question = {"question": user_input}
-            question.insert_one(new_question)
-            return "ADDED"
-    except Exception as e:
-        return f"Error: {str(e)}"
 
 def main():
-    # Rest of your main function remains the same
+    st.set_page_config(
+        page_title="Question Answering",
+        page_icon="🦁",
+    )
     st.title("Question Answering")
 
-    # Display a warning about the app's potential slowness
-    st.warning("This app may run slowly as it fetches data from the web", icon="⚠️")
+    st.warning("this app runs very slow bc we fetch data from the web", icon="⚠️")
 
-    # Get user input
     user_input = st.text_input("Enter your sentence:")
 
-    # Check for profanity in user input
     s = profanity.contains_profanity(str(user_input))
 
-    if not s:
-        # If no profanity, proceed with finding the answer and inserting into the database
+    if s == False:
         if st.button("Get Answer"):
-            with st.spinner("Finding answer..."):
-                answer_result = answer(user_input)
-                time.sleep(2)
-            st.success("Answer found!")
-            st.write("Answer:", answer_result)
 
-            # Insert the user input into the database
-            result_message = insert_in_db(user_input)
-            st.write(result_message)
+            with st.status("Finding it...", expanded=True) as status:
+                answer_result = answer(user_input)
+                st.write("Answer: ", answer_result)
+                st.write("Saving to database")
+                answer_result = answer_result.strip(" ")
+                a = write_data(user_input, str(user_input)+"  "+str(answer_result))
+                #st.write("Downloading data...")
+                #time.sleep(1)
+                status.update(label="All set!", state="complete", expanded=False)
+
+            #with st.spinner("Finding answer..."):
+            #answer_result = answer(user_input)
+            #time.sleep(2)
+            #st.success("Answer found!")
+            #st.write("Answer:", answer_result)
+            #answer_result = answer_result.strip(" ")
+            #a = write_data(user_input, str(user_input)+"  "+str(answer_result))
     else:
-        # Display an error message for profanity
-        st.error("NO BAD WORDS ALLOWED!", icon='🚨')
+        st.error("NO BAD WORDS!", icon='🚨')
+        pass
 
 if __name__ == "__main__":
     main()
